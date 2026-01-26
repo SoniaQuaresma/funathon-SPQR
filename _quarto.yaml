@@ -1,0 +1,58 @@
+project:
+  type: website
+  render:
+    - "*.qmd"
+website:
+  title: "Funathon 2024 - Sujet 3"
+  page-navigation: true
+  description: "Reconstruction de l'interface utilisateur de FlightRadar24"
+  site-url: "https://inseefrlab.github.io/funathon2024_sujet3/"
+  repo-url: "https://github.com/InseeFrLab/funathon2024_sujet3"
+  repo-actions: [edit, issue]
+
+  open-graph: true
+
+  page-footer:
+    right:
+    - text: "License"
+      href: LICENCE
+
+  navbar:
+    align: center
+    title: false
+    collapse-below: lg
+ 
+    right:
+      - icon: github
+        href: "https://github.com/InseeFrLab/funathon2024_sujet3"
+        aria-label: GitHub
+
+    left:
+      - text: "Introduction"
+        href: index.qmd
+      - text: "1 Manipuler API FlightRadar24"
+        href: 1-api.qmd
+      - text: "2 Première version de l'UI"
+        href: 2-dash.qmd
+      - text: "3 Améliorer l'UI"
+        href: 3-advanced.qmd
+      - text: "4 Améliorer encore l'UI"
+        href: 4-final.qmd
+      - text: "5 Déployer l'UI"
+        href: 5-deployment.qmd
+      - text: "Application démo"
+        href: "https://flightradar-ui-demo.lab.sspcloud.fr"
+
+format:
+  html:
+    theme:
+      light: [cosmo, custom.scss]
+    toc: true
+    reference-location: margin
+    code-copy: true
+    code-overflow: wrap
+
+execute: 
+  eval: true
+  cache: true
+  warning: false

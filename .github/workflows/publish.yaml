@@ -1,0 +1,32 @@
+name: Publish site
+
+on:
+  push:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+jobs:
+  publish-site:
+      runs-on: ubuntu-latest
+
+      permissions:
+        contents: write
+      steps:
+
+        - name: Check out repository
+          uses: actions/checkout@v3
+
+        - name: Install Python Dependencies
+          run: |
+            pip install -r requirements.txt
+
+        - name: Set up Quarto
+          uses: quarto-dev/quarto-actions/setup@v2
+
+        - name: Render and Publish
+          uses: quarto-dev/quarto-actions/publish@v2
+          with:
+            target: gh-pages
+          # env:
+          #   GITHUB_TOKEN: ${{ secrets.TOKEN_CI }}
