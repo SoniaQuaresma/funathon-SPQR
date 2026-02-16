@@ -131,3 +131,14 @@ with plot of repartition for various var stat_des_details_surf_flat_num
     - use pandas dataframe.hist to plot histogram easily
 
 pairplot with log_price : cf. stat_des_some_vars_pairplot
+
+16/02
+- stat des on depcom (question encoding ?), dteloc (boolean apt), dnbppr, dnbcha, dsupdc
+- calculating price_sqm
+- fitter a first RFregressor on 100 000 and 150 000 obs with depcom (question encoding ?), dteloc (boolean apt), dnbppr, dnbcha, dsupdc
+
+|N_obs | price | price per sqm |
+| -- | --- | --- |
+|100 000|  5 CV ; <br> - Mean cross validation accuracy is : 0.551 +- 0.011 with an elapsed time of 129.945s <br> - Mean cross validation accuracy is : 0.495 +- 0.046 with an elapsed time of 184.692s | |
+
+- Stay on a region and do not filter on years. Have price per sqm and not price. 
