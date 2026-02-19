@@ -142,3 +142,19 @@ pairplot with log_price : cf. stat_des_some_vars_pairplot
 |100 000|  5 CV ; <br> - Mean cross validation accuracy is : 0.551 +- 0.011 with an elapsed time of 129.945s <br> - Mean cross validation accuracy is : 0.495 +- 0.046 with an elapsed time of 184.692s | |
 
 - Stay on a region and do not filter on years. Have price per sqm and not price. 
+
+19/02 : 
+- feature selection : 
+    keep all paris (75) transactions. 
+    Add ccordinates (x, y)
+    Target = price per sqm
+    2 sets of feature : 
+        - a minimal : CV score = 9%  
+        - all features : CV score = 22%
+    Impact of outlier ? 
+    Removes all prices_sqm below quantile 0.9 and above quantile 0.1. Impact : 
+        - a minimal : CV score = 13% +-3%  
+        - all features : CV score = 38% +-2%
+    Removes all prices_sqm below quantile 0.8 and above quantile 0.2. Impact : 
+        - a minimal : CV score = 6% +-1%  
+        - all features : CV score = 25% +-2%
