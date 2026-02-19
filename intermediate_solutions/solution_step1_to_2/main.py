@@ -131,5 +131,9 @@ for feature in features_list:
             f"  with an elapsed time of {elapsed_time:.3f}s"
         )
 
+# %%
 
+dummy_regr = DummyRegressor(strategy="mean")
+dummy_regr.fit(data_features, data_target)
+dummy_regr.score(data_features, data_target)
 # %%
