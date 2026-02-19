@@ -30,7 +30,8 @@ data_all["dteloc"] = pd.Categorical(
 ).rename_categories({"1": "House", "2": "Flat"})
 
 data_all["price_sqm"] = data_all["valeurfonc"] / data_all["dsupdc"]
-data_all["dnivrel"] = data_all["dniv"] / data_all["dnbniv"]
+data_all.loc[data_all["dnbniv"]==0, "dnivrel"] = 0
+data_all.loc[data_all["dnbniv"]>0, "dnivrel"] = data_all["dniv"] / data_all["dnbniv"]
 
 # Selecting the only cols we want to use
 
@@ -41,7 +42,11 @@ features_list = [
     ['anneemut', 'dteloc', 'jannath', 'ccodep', 'depcom', 'x', 'y','distance_ltm', 'dnbniv', 'dnbbai', 'dnbdou',
        'dnblav', 'dnbwc', 'dnbppr', 'dnbsam', 'dnbcha', 'dnbcu8', 'dnbcu9',
        'dnbsea', 'dnbann', 'dnbpdc', 'dsupdc', 'dniv', 'nb_terrasses',
-       'nb_greniers', 'nb_caves', 'nb_autresdep']
+       'nb_greniers', 'nb_caves', 'nb_autresdep'], 
+    ['anneemut', 'dteloc', 'jannath', 'ccodep', 'depcom', 'x', 'y','distance_ltm', 'dnbniv', 'dnbbai', 'dnbdou',
+       'dnblav', 'dnbwc', 'dnbppr', 'dnbsam', 'dnbcha', 'dnbcu8', 'dnbcu9',
+       'dnbsea', 'dnbann', 'dnbpdc', 'dsupdc', 'dniv', 'nb_terrasses',
+       'nb_greniers', 'nb_caves', 'nb_autresdep', 'dnivrel']
 ] 
 target = "price_sqm"
 data_75 = data_all[data_all['ccodep'] == '75'].dropna()
@@ -90,6 +95,7 @@ data_preproc = data_75[(data_75[target] <= max_target) & (data_75[target] >= min
 # min_target = data_75[target].quantile(0.2)
 # data_preproc = data_75[(data_75[target] <= max_target) & (data_75[target] >= min_target)]
 # %%
+#| label: nb_features_accuracy
 # Impact of nb of features on accuracy :  
 
 scoring = {
@@ -102,7 +108,7 @@ for feature in features_list:
     y = data_preproc[target] # depcom (question encoding ?), dteloc (boolean apt), dnbppr, dnbcha, dsupdc
 
     start = time.time()
-    cv_results = cross_validate(estimator=model_gb, X=X, y=y, scoring=scoring, return_train_score=True)
+    cv_results = cross_validate(estimator=model_hist, X=X, y=y, scoring=scoring, return_train_score=True, cv=5)
     elapsed_time = time.time() - start
     
     print(

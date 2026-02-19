@@ -144,7 +144,7 @@ pairplot with log_price : cf. stat_des_some_vars_pairplot
 - Stay on a region and do not filter on years. Have price per sqm and not price. 
 
 19/02 : 
-- feature selection : 
+- feature selection : cf. nb_features_accuracy
     keep all paris (75) transactions. 
     Add ccordinates (x, y)
     Target = price per sqm
@@ -207,4 +207,8 @@ dummyregressor :
 Hyperparameter tuning
  => impact of hyperparams on MAPE is residual. cf. hyperparams_tuning and cf. hyperparams_plot
 
-add dniv / dnbniv ?
+add dniv / dnbniv as dnivrel : no impact, cf nb_features_accuracy. 
+
+Add distance to Seine ? 
+
+Plot the results ? 
