@@ -6,7 +6,8 @@ Repository of the 1st funathon project (tabular data)
 1.	idlocal : identifiant cadastral unique ;
 2.	ccodep : département ;
 3.	ccocom : commune ;
-4.	dteloc : type de logement (1 : maison, 2 : appartement) ;
+4.	dteloc : type de logement (1 : maison,
+ 2 : appartement) ;
 5.	anneemut : année de mutation ;
 6.	datemut : date de mutation ;
 7.	libnatmut : type de transaction (vente ou VEFA) ;
@@ -31,9 +32,14 @@ Repository of the 1st funathon project (tabular data)
 26.	dnbsea : nombre de salles d’eau ;
 27.	dnbann : nombre de pièces annexes ;
 28.	dnbpdc : nombre de pièces ;
-29.	x, y : coordonnées géo.
+29.	x,
+ y : coordonnées géo.
 30. dnbniv : prend en compte le rdc
-geaulc	gelelc	gesclc	ggazlc	gasclc	gchclc	gvorlc	gteglc	dniv	dcntsol	dcntagri	dcntnat   : caractéristiques des équipements (gaz, électricité, eau, escalier, ascenceur)
+geaulc	gelelc	gesclc	ggazlc	gasclc	gchclc	gvorlc	gteglc	dniv	dcntsol	dcntagri	dcntnat   : caractéristiques des équipements (gaz,
+ électricité,
+ eau,
+ escalier,
+ ascenceur)
 
 
 10/02:
@@ -41,7 +47,8 @@ quelles sont les déf de geaulc	gelelc	gesclc	ggazlc	gasclc	gchclc	gvorlc	gteglc
 
 Fait : 
 - retrouver des transactions connues pour regarder les variables
-x, y : coordonnées géographiques semblent ok 
+x,
+ y : coordonnées géographiques semblent ok 
 
 Questions : 
 - pourquoi deux fichiers flat et houses ?
@@ -102,19 +109,26 @@ stats des
 | nb_caves          | Int32   | 4695874 |        0 |     0 |   4695874 | 0.0                | 0                   | 22                |
 | nb_autresdep      | Int32   | 4695874 |        0 |     0 |   4695874 | 0.0                | 0                   | 91                |
 
-idnatmut = 1 tout le temps, pq ? 
+idnatmut = 1 tout le temps,
+ pq ? 
 que les vente dans le data set
-répartition valeurfonc pour détecter valeurs aberrantes/ Max est à 66,5M€. A été filtré avant ? 
-distance_ltm, distance_ltm_corr : distance au littoral
+répartition valeurfonc pour détecter valeurs aberrantes/ Max est à 66,
+5M€. A été filtré avant ? 
+distance_ltm,
+ distance_ltm_corr : distance au littoral
 dataset a bien été cleané avant. 99 is missing value ? 
-comprend les transactions en DOM (St Martin, Guadeloupe, mais pas celles en Alsace Moselle cf. all_transactions_plot)
+comprend les transactions en DOM (St Martin,
+ Guadeloupe,
+ mais pas celles en Alsace Moselle cf. all_transactions_plot)
 
 
 12/02
 stat des de répartition des valeurs descriptives cf. stat_des_details_flat
 Quasiment que des 0 pour les flat cf. stat_des_details_surf_flat_num et stat_des_details_surf_flat_plot
 "dcntsol",
+
 "dcntnat",
+
 "dcntagri"
 with plot of repartition for various var stat_des_details_surf_flat_num
 
@@ -125,7 +139,11 @@ with plot of repartition for various var stat_des_details_surf_flat_num
 - impact of encoder ? 
 - première regression simple : 
     - filtrer sur 1 année
-    - features : depcom (question encoding ?), dteloc (boolean apt), dnbppr, dnbcha, dsupdc
+    - features : depcom (question encoding ?),
+ dteloc (boolean apt),
+ dnbppr,
+ dnbcha,
+ dsupdc
 - do stat des with data samples to ease computation time
     - use seaborn.pairplot to plot correlation graph
     - use pandas dataframe.hist to plot histogram easily
@@ -133,9 +151,17 @@ with plot of repartition for various var stat_des_details_surf_flat_num
 pairplot with log_price : cf. stat_des_some_vars_pairplot
 
 16/02
-- stat des on depcom (question encoding ?), dteloc (boolean apt), dnbppr, dnbcha, dsupdc
+- stat des on depcom (question encoding ?),
+ dteloc (boolean apt),
+ dnbppr,
+ dnbcha,
+ dsupdc
 - calculating price_sqm
-- fitter a first RFregressor on 100 000 and 150 000 obs with depcom (question encoding ?), dteloc (boolean apt), dnbppr, dnbcha, dsupdc
+- fitter a first RFregressor on 100 000 and 150 000 obs with depcom (question encoding ?),
+ dteloc (boolean apt),
+ dnbppr,
+ dnbcha,
+ dsupdc
 
 |N_obs | price | price per sqm |
 | -- | --- | --- |
@@ -146,7 +172,8 @@ pairplot with log_price : cf. stat_des_some_vars_pairplot
 19/02 : 
 - feature selection : cf. nb_features_accuracy
     keep all paris (75) transactions. 
-    Add ccordinates (x, y)
+    Add ccordinates (x,
+ y)
     Target = price per sqm
     2 sets of feature : 
         - a minimal : CV score = 9%  
@@ -161,7 +188,13 @@ pairplot with log_price : cf. stat_des_some_vars_pairplot
 
 Cf features_plus_model_selection
 Data set : 
-   - 7 col (['depcom', 'x', 'y', 'dteloc', 'dnbppr', 'dnbcha', 'dsupdc'])
+   - 7 col (['depcom',
+ 'x',
+ 'y',
+ 'dteloc',
+ 'dnbppr',
+ 'dnbcha',
+ 'dsupdc'])
    - n_ops : 322805 
 
 = Model is : GradientBoostingRegressor 
@@ -180,7 +213,33 @@ Data set :
    - R2 : 0.027 
   with an elapsed time of 108.227s
 Data set : 
-   - 27 col (['anneemut', 'dteloc', 'jannath', 'ccodep', 'depcom', 'x', 'y', 'distance_ltm', 'dnbniv', 'dnbbai', 'dnbdou', 'dnblav', 'dnbwc', 'dnbppr', 'dnbsam', 'dnbcha', 'dnbcu8', 'dnbcu9', 'dnbsea', 'dnbann', 'dnbpdc', 'dsupdc', 'dniv', 'nb_terrasses', 'nb_greniers', 'nb_caves', 'nb_autresdep'])
+   - 27 col (['anneemut',
+ 'dteloc',
+ 'jannath',
+ 'ccodep',
+ 'depcom',
+ 'x',
+ 'y',
+ 'distance_ltm',
+ 'dnbniv',
+ 'dnbbai',
+ 'dnbdou',
+ 'dnblav',
+ 'dnbwc',
+ 'dnbppr',
+ 'dnbsam',
+ 'dnbcha',
+ 'dnbcu8',
+ 'dnbcu9',
+ 'dnbsea',
+ 'dnbann',
+ 'dnbpdc',
+ 'dsupdc',
+ 'dniv',
+ 'nb_terrasses',
+ 'nb_greniers',
+ 'nb_caves',
+ 'nb_autresdep'])
    - n_ops : 322805 
 
 = Model is : GradientBoostingRegressor 
@@ -207,7 +266,8 @@ dummyregressor :
 Hyperparameter tuning
  => impact of hyperparams on MAPE is residual. cf. hyperparams_tuning and cf. hyperparams_plot
 
-add dniv / dnbniv as dnivrel : no impact, cf nb_features_accuracy. 
+add dniv / dnbniv as dnivrel : no impact,
+ cf nb_features_accuracy. 
 
 Add distance to Seine ? 
 
@@ -215,11 +275,8 @@ Plot the results ?
 
 stat des with pandas to select variables : cf. stat_des75_pandas
 
-{'idmutation':'idtrans, 'datemut':'datetrans', 'anneemut':'yeartrans', 'moismut':'monthtrans', 'idnatmut':'natidtrans', 'libnatmut':'typetrans',
-       'valeurfonc':'price', 'dteloc':'typeass', 'jannath':'yearbuild', 'ccodep':'depcode', 'depcom':'zipcode', 'x', 'y',
-       'distance_ltm':'dist_tosea', 'distance_ltm_corr':'dist_toseacorr', 'dnbniv':'numbfloors', 'dnbbai':'numbbat', 'dnbdou':'numbshow',
-       'dnblav':'numbsinc', 'dnbwc':'numbwc', 'dnbppr':'numbroom', 'dnbsam':'numbeatr', 'dnbcha':'numbslr', 'dnbcu8':'numbkit8', 'dnbcu9':'numbkit9',
-       'dnbsea', 'dnbann', 'dnbpdc', 'dsupdc', 'geaulc', 'gelelc', 'gesclc',
-       'ggazlc', 'gasclc', 'gchclc', 'gvorlc', 'gteglc', 'dniv', 'dcntsol',
-       'dcntagri', 'dcntnat', 'nb_garages', 'nb_piscines', 'nb_terrasses',
-       'nb_greniers', 'nb_caves', 'nb_autresdep', 'price_sqm', 'dnivrel'}
+
+
+ - que veulent dire   'gchclc',  'gvorlc',  'gteglc'
+ - codification des variables : maximisées ? 
+
