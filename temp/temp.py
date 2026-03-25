@@ -37,9 +37,9 @@ dict_fr_en = {
   'gesclc':['stair', 'If the property has stairs'], # 0 to 2 ## 2 and more ?  
   'ggazlc':['has_gas', 'If the building is connected to the gas mains'], # 0 to 2 ## 2 and more ?  pas une indicatrice ?
   'gasclc':['has_elevator', 'If the building of the flat has an elevator'], # 0 to 2 ## 2 and more ? 
-  'gchclc':['gteglc'], # 0 to 2 ## 2 and more ? 
-  'gvorlc':['gteglc'], # 0 to 2 ## 2 and more ? 
-  'gteglc':['gteglc'], # 0 to 2 ## 2 and more ? 
+  'gchclc':['has_cheating', 'If the property has access to central heating'], # 0 to 2 ## 2 and more ? 
+  'gvorlc':['has_rchute', 'If the property has a refuse chute'], # 0 to 2 ## 2 and more ? 
+  'gteglc':['has_mdrainage', 'If the property is connected to the mains drainage system'], # 0 to 2 ## 2 and more ? 
   'dniv':['nth_floor','Reported floor of the property', 'It represents the floor of the flat (in France, the second floor is the first floor above ground level). This variable is set to 00 for houses. Underground floors encoding is not fully harmonized and is often equal to 81 for minus 1, 82 for minus 2 ... It can also be encoded as 99, 98. A flat at the 2nd floor of a seven-floors building should be encoded with nth_floor=1 and n_floors=8 (ground floor and seven floors above ground level). '], # 0 to 99 ## 99 and more ? 
   'dcntsol':['s_land_artif', 'Artificial land area (square meters)', 'Artificial land includes recreational areas, land, building plots and gardens. Artificial land refers to land that has been altered by humans.'], # 0 to 1684404  
   'dcntagri':['s_land_agri', 'Agricultural land area (square meters)', 'Agricultural land is used for farming. It includes fields, meadows, orchards and vineyards. '], # 0 to 4486113  
