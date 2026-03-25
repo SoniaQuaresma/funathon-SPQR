@@ -430,7 +430,7 @@ df["dteloc"] = pd.Categorical(
 ```
 
 
-4.  The codification of categorical variable can be computational intensive. `dteloc` has only two modalities but check the number of modalities of `jannath`. To speed-up the computation, can we regroup modalities together ?  How can we do it ? 
+4.  The codification of categorical variable can be computational intensive. `dteloc` has only two modalities but check the number of modalities of `jannath`. To speed-up the computation, can we regroup modalities together ?  Does it make sense given how the variable has been transformed (see the [presentation of the data](index.qmd)) ? How can we do it ? 
 
 ```{python}
 #| code-fold: true
