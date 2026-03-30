@@ -45,16 +45,12 @@ editor_options:
 
 # Introduction {.unnumbered}
 
-The project focuses on predicting housing prices in the Paris area (Île-de-France region). 
-We will explore how to perform inference using only a limited number of data sources, specifically transaction records and cadastral data. 
-The reason for this choice is that data sources are widely available across many countries. 
-At the end of this project, you will be able to : 
+The project focuses on predicting housing prices in the Paris area (Île-de-France region). We will explore how to perform inference using only a limited number of data sources, specifically transaction records and cadastral data. The reason for this choice is that data sources are widely available across many countries. At the end of this project, you will be able to :
 
-- prepare your training data;
-- train common machine learning (ML) models;
-- evaluate your models by choosing the most suited metric;
-- use some tools to ensure the reproductibility of the process (monitoring the model, deploy an API).
-
+-   prepare your training data;
+-   train common machine learning (ML) models;
+-   evaluate your models by choosing the most suited metric;
+-   use some tools to ensure the reproductibility of the process (monitoring the model, deploy an API).
 
 # Structure of the project
 
@@ -66,29 +62,103 @@ This project includes five steps (listed in the banner at the top of the page):
 -   model logging with MLflow;
 -   deployment.
 
-Every step is independant from the other : one will be able to start from the next step if a step is too difficult. 
+Every step is independent from the other : one will be able to start from the next step if a step is too difficult.
+
+# Presentation of the data
+
+## Opening remarks
+
+### How to buy a property in France ?
+
+A housing transaction is always formalized in front of a **notary** in France, who acts as a legal intermediary to ensure the transaction’s validity and compliance with civil law. The notary checks among other things that the property effectively belongs to the seller, calculates and collects the **transfer taxes** (such as *droits de mutation*) based on the transaction’s details and the property’s characteristics.
+
+After collecting these taxes, the notary forwards the details of the transaction to the **fiscal administration**, including the sale price, the identities of the buyer and seller, the property’s cadastral reference and the notarized document. The fiscal administration then records this information in its databases and updates the **land registry** to reflect the new ownership.
+
+### Specificity of the data set
+
+Since 2019, the fiscal administration publishes **all real estate transactions** twice a year in open data format on data.gouv.fr. You can access and download the original datasets (*Demande de Valeurs Foncières - DVF* or request for property values) directly here (in French only - sadly 😞): [data.gouv.fr/datasets/demandes-de-valeurs-foncieres](https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres).
+
+**Types of transaction stored**:
+
+What transaction is stored in the DVF dataset is a vast question. It's key to remember that the first goal of the dataset is to collect taxes. The dataset therefore is not fully complete and does not contain all the housing transactions in France that we would be interested in (the dataset remains of very high value and one of the most complete source of transaction as of today). For example, transactions involving **real estate investment company** (or *Sociétés Civiles Immobilières (SCIs)*) are excluded from housing transaction data, as they are not considered housing transactions from a legal perspective. However, in the way these companies are used transfering the ownership of a SCI is very similar to buying a property.
+
+In addition, some transaction are registered in the data when they are of little interest to us. For example:
+
+-   The DVF records partial transaction. When a property is jointly owned and one of the owner sells its part to his/her brothers or sisters for example, the transaction does not specify the **share of ownership transferred**, as only the total sale price is recorded ;
+-   The initial transfer of ownership from an individual to an SCI is recorded as a housing transaction, even if the SCI is usually owned by the same persons.
+
+**Geographic coverage of the data** :
+
+The dataset includes **overseas territories** such as Guadeloupe, Martinique, and Réunion, but excludes **Alsace-Moselle** (the departments of Bas-Rhin, Haut-Rhin, and Moselle). This exclusion is due to the **local civil law** (*droit local*), which applies in Alsace-Moselle because these territories were part of Germany from 1870 to 1918. It is not an issue as we will focus on the Paris region but keep this in mind if you want to play a little more with the data.
+
+**Geographical codes** :
+
+The French territory is split in 18 regions (excluding the special case of overseas collectivities). Each region is made of departments (101 departments nationwide). Each department is identified with a unique non numeric **department code**, such as *75* for Paris or *2A* for southern Corsica.
+
+The **official geographic code** — commonly referred to as the **Insee code** — is a unique five-digit identifier assigned by the National Institute of Statistics and Economic Studies ([Insee](https://www.insee.fr/en/metadonnees/source/serie/s2084)) to each city, department, region and other administrative area. This code allows to uniquely identify a city (or equivalent) and remains constant even if the city’s name changes or if it merges with another municipality. The two first digits of the city's Insee code is the department code. You can find the full COG data and documentation here: [Insee - Code Officiel Géographique (COG)](https://www.insee.fr/fr/information/2560452) and in open data format here: [data.gouv.fr - Code Officiel Géographique (COG)](https://www.data.gouv.fr/datasets/code-officiel-geographique-cog).
+
+It means that if you search for a city with its Insee code on Google maps for example, Google maps won't find it as it uses the **zip code** (or postal code). The zip code is not a reliable identifier for a city as multiple cities share the same zip code, and a single city may have several zip codes depending on its districts or neighborhoods.
+
+For example, the city of Paris is identified by the department code **75**, the Insee code **75056** (Paris itself), and is associated with multiple zip codes (e.g., **75001**, **75002**, etc.). Montrouge's Insee code is 92049 and 92 is the department code of Hauts-de-Seine, where Montrouge is located.
+
+## General presentation of the data
+
+Data prepared for this project gathers all of the housing transactions in France between 2014 and 2021 and details about the property sold.\
+Because the characteristics of the property sold isn't open source, the data you'll be working with are **synthetic data**. It has been generated to mirror the original data.
+
+If you want to have a closer look at the data, CEREMA publishes on [its website](%5D(https://doc-datafoncier.cerema.fr/doc/ff/pb0010_local)) an extensive documentation of the different datasets, the variables, their modalities and the overall quality of variable.
+
+## List of variable and explanations
+
+{{< include "temp/table_dict.qmd" >}}
+
+See [CEREMA's documentation (in French)](https://doc-datafoncier.cerema.fr/doc/ff/pb0010_local) for a more detailled description.
+
+Note that the variable year of the building has been harmonized to correct for typing mistakes. Here are the transformation made from the original data :
+
+| Original modality | Corrections to original modality | Exemple of transformation |
+|------------------------|------------------------|------------------------|
+| 1 ≤ prop_year ≤ 22 | Add 2000 as the first digits were not entered | 8 → 2008 |
+| 23 ≤ prop_year ≤ 99 | Add 1900 as the first digits were not entered | 83 → 1983 |
+| 100 ≤ prop_year ≤ 119 | Set to 0 as it is unknown | 105 → 0 |
+| 120 ≤ prop_year ≤ 200 | Add a 0 at the end as the last digit has not been entered | 187 → 1870 |
+| 201 ≤ prop_year ≤ 299 | Set to 0 as it is unknown | 250 → 0 |
+| 300 ≤ prop_year ≤ 999 | Add 1000 as the first digits have not been entered | 980 → 1980 |
+| 1000 ≤ prop_year ≤ 1120 | Set to 0 as it is unknown | 1005 → 0 |
+| 1120 ≤ prop_year ≤ 1199 | Replace the second 1 with 9 | 1155 → 1955 |
+| 1200 ≤ prop_year ≤ 2022 | Pas de modification | 1200 → 1200 |
+
+More information about this transformation is available [online](https://doc-datafoncier.cerema.fr/doc/ff/pb40_pevprincipale/jannath) (in French).
 
 # Initialization of the project
 
-## Clone the project with `Git` {{< fa brands git-alt >}}
+## Technical requirements
+
+-   You need to have an account on [Insee's Onyxia platform](https://datalab.sspcloud.fr/), called SSPCloud (for *cloud platform for the French Official Statistical System*). When you are on this webpage, you should see something similar to this image once you're logged in. To change the language, you can do so on the bottom right part of the webpage (see the orange arrow on the screen shot below).
+
+![Home page of <https://datalab.sspcloud.fr/>](onyxia_home.png)
+
+-   You also need to have a Github account. Your Github credentials (username, email and token) should be registered in your [Insee's Onyxia](https://datalab.sspcloud.fr/) account in the My account/Git tab.
+
+## Fork the project with `Git` {{< fa brands git-alt >}}
+
+First, you need to fork the funathons's project on Github by clicking on [this link](https://github.com/AIML4OS/funathon-project1/fork). For convenience, **please not to change the repository name**. Write down the owner's name `OWNER_NAME` for the next step.
+
+![Forking a github project](github_fork.png)
+
+## Open a VS Code on SSPCloud / Onyxia
 
 ::: {.callout-note appearance="simple"}
-
 ## Caution
 
-To launch in the project, open a VS Code service with the following button : <a href="https://datalab.sspcloud.fr/launcher/ide/vscode-python?name=vscode-acces-github&version=2.5.2&s3=region-79669f20&resources.requests.cpu=%C2%AB13800m%C2%BB&resources.requests.memory=%C2%AB74Gi%C2%BB&resources.limits.cpu=%C2%AB20900m%C2%BB&resources.limits.memory=%C2%AB155Gi%C2%BB&persistence.size=%C2%AB69Gi%C2%BB&kubernetes.role=%C2%ABadmin%C2%BB&vault.secret=%C2%ABcoicop_rag%C2%BB&git.token=%C2%AB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%C2%BB&git.repository=%C2%ABhttps%3A%2F%2Fgithub.com%2FInseeFrLab%2Fcoicop-rag.git%C2%BB&networking.user.enabled=true" target="_blank" rel="noopener" data-original-href="AUTOLAUNCH_URL_THERE"><img src="https://custom-icon-badges.demolab.com/badge/SSP%20Cloud-Launch_with_VSCode-blue?logo=vsc&amp;logoColor=white" alt="Onyxia"/></a>.
-
-To avoid problems later, you must modify two elements in the configuration of the service :
-
--   In *Networking part of the form*, check the case "Enable a custom service port" ;
--   In *Kubernetes part of the form*, change the role in `admin`.
+To launch in the project, open a VS Code service with the following button : <a href="https://datalab.sspcloud.fr/launcher/ide/vscode-python?name=AIML4OS-funathon-project1&version=2.5.2&s3=region-79669f20&git.cache=«5000»&networking.user.enabled=true&autoLaunch=true" target="_blank" rel="noopener"><img src="https://custom-icon-badges.demolab.com/badge/SSP%20Cloud-Launch_with_VSCode-blue?logo=vsc&amp;logoColor=white" alt="Onyxia"/></a>.
 :::
 
-Create a VScode-Python service on SSP Cloud. In the service, open a terminal by clicking on {{< fa brands fa-bars >}}, then `Terminal > New Terminal`. 
-Clone the project repository with:
+Create a VScode-Python service on SSP Cloud. In the service, open a terminal by clicking on {{< fa brands fa-bars >}}, then `Terminal > New Terminal`. Clone the project repository with the following command after replacing `OWNER_NAME` with your name on Github from the previous step:
 
-```{bash}           
-git clone https://github.com/AIML4OS/funathon-project1.git
+```{bash}
+OWNER_NAME="AIML4OS"  # Change your Github name here
+git clone https://$GIT_PERSONAL_ACCESS_TOKEN@github.com/$OWNER_NAME/funathon-project1.git  # do not change this line
 ```
 
 The project has the following structure :
@@ -103,13 +173,14 @@ The project has the following structure :
 
 Install the project dependencies by running the following command in the terminal:
 
-```{bash}         
+```{bash}
+cd funathon-project1
 uv sync
 ```
 
 If you need to install a new package, run the following command :
 
-```{bash}           
+```{bash}
 uv add <dependency_name>
 ```
 
@@ -124,13 +195,13 @@ You can verify your current location by checking the terminal prompt: it should 
 
 -   **good path** ✅ :
 
-```{.bash}           
+``` bash
 onyxia@vscode-python-882151-0:~/work/funathon-project1$ 
 ```
 
 -   **bad path** ❌ :
 
-```{.bash}           
+``` bash
 onyxia@vscode-python-882151-0:~/work$ 
 ```
 :::
@@ -141,6 +212,6 @@ After installing dependencies with `uv`, you need to configure the Python interp
 
 To do this, open the command palette `Show and Run commands` then select **`Python: select interpreter`** , or press `Ctrl+Shift+P`. Finally, enter the following path, which corresponds to the Python interpreter generated by `uv` :
 
-```{bash}           
+``` bash
 /home/onyxia/work/funathon-project1/.venv/bin/python3.13
 ```

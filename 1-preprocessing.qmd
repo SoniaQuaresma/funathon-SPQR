@@ -51,6 +51,7 @@ The aim of this part is to manipulate new database and understand features in or
     #| code-overflow: scroll
 
     import duckdb
+    import os
 
     # Create a non-persistent connection (the database exists only while the connection is alive and disappears when it is closed)
     con = duckdb.connect(database=":memory:")
@@ -420,7 +421,8 @@ df["dteloc"] = pd.Categorical(
 ).rename_categories({"1": "House", "2": "Flat"})
 ```
 
-4.  The codification of categorical variable can be computational intensive. `dteloc` has only two modalities but check the number of modalities of `jannath`. To speed-up the computation, can we regroup modalities together ? How can we do it ?
+
+4.  The codification of categorical variable can be computational intensive. `dteloc` has only two modalities but check the number of modalities of `jannath`. To speed-up the computation, can we regroup modalities together ?  Does it make sense given how the variable has been transformed (see the [presentation of the data](index.qmd)) ? How can we do it ? 
 
 ```{python}
 #| code-fold: true

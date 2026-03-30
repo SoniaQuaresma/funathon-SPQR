@@ -4,7 +4,8 @@
 # ============================================
 
 import numpy as np
-import pandas as pd
+import polars as pl
+import polars.selectors as cs
 
 from sklearn.datasets import make_regression
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -15,7 +16,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 
 # Reproducibility
-RANDOM_STATE = 20230516
+RANDOM_STATE = 20260213
 np.random.seed(RANDOM_STATE)
 
 # Generate numeric regression data
@@ -27,14 +28,13 @@ X_num, y = make_regression(
 )
 
 # Create a DataFrame
-df = pd.DataFrame(X_num, columns=[f"num_{i}" for i in range(X_num.shape[1])])
+df = pl.DataFrame(X_num, schema=[f"num_{i}" for i in range(X_num.shape[1])])
 
 # Add a categorical feature
-df["category"] = np.random.choice(["A", "B", "C"], size=len(df))
-
-# Add target
-df["target"] = y
-
+df = df.with_columns(
+    category=np.random.choice(["A", "B", "C"], size=len(df)), 
+    target=y
+)
 
 # %%
 # ============================================
@@ -44,21 +44,24 @@ df["target"] = y
 #   - One-hot encoding
 # ============================================
 
-# Simple outlier removal using IQR on numeric columns
-numeric_cols = [col for col in df.columns if col.startswith("num_")]
+numeric_cols = df.select(cs.numeric().exclude("target")).columns
 
-Q1 = df[numeric_cols].quantile(0.25)
-Q3 = df[numeric_cols].quantile(0.75)
+# Simple outlier removal using IQR on numeric columns
+Q1 = df.select(numeric_cols).quantile(0.25)
+Q3 = df.select(numeric_cols).quantile(0.75)
 IQR = Q3 - Q1
 
-mask = ~((df[numeric_cols] < (Q1 - 1.5 * IQR)) |
-         (df[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
-
-df = df.loc[mask].reset_index(drop=True)
+df = df.filter(
+    [
+        (pl.col(col) >= (Q1[col] - 1.5 * IQR[col])) &
+        (pl.col(col) <= (Q3[col] + 1.5 * IQR[col]))
+        for col in numeric_cols
+    ]
+)
 
 # Split features / target
-X = df.drop(columns="target")
-y = df["target"]
+X = df.drop(pl.col("target"))
+y = df.select("target")
 
 # Column types
 categorical_cols = ["category"]
