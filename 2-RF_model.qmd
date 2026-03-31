@@ -347,6 +347,25 @@ print(oob_error_ntrees)
 
 > Note : In the Preprocessing section, you saw how to build a Pipeline. In this exercise, we will use Pipeline again. The first exercise didn't use it to let you practice scikit-learn tools documented [here](https://scikit-learn.org/stable/modules/compose.html#pipelines-and-composite-estimators).
 
+0.  For convenience, we dropped the features `dteloc`, `dtemut`. Get them back and define the new training and testing datasets `X_train, X_test, y_train, y_test`.
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+# Split features / target
+X = df.drop(columns="valfonc_m2")  
+y = df["valfonc_m2"]  
+
+# Split train / test set
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=RANDOM_STATE
+)
+```
 
 1.  Create a dictionary with all hyperparameters to test for training.
 
