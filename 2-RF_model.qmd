@@ -39,10 +39,12 @@ For more information, you can read the paragraph on RF hyperparameters [here](ht
 
     -   min_samples_leaf=10
 
-    As it's only a first step drop the `datemut` and `dteloc` columns. 
+    Train the model with the remaining non transformed target (it should take about 5 minutes to train). 
+
+    As it's only a first step we chose to simplify the exercise. First, we will drop the `datemut` and `dteloc` features. Secondly, we will work with the **non transformed target** (i.e.price per square meter) and not use the transformed target (i.e. log of the price per square meter) defined at the end of the pre-processing. 
+
     We will come back to this later on and chain it with the preprocessing steps. 
 
-    Train the model with the remaining non transformed target (it should take about 5 minutes to train). 
 
     > **Note: All parameters of RandomForestRegressor have a default value - you only need to explicitly pass the ones you wish to override.**
 
@@ -152,7 +154,13 @@ We will implement a function to plot the OOB error as a function of the number o
 
 -   plot the OOB error for each RF model to visualize the convergence.
 
-1.  Subsample a fraction ( `0.1` ) of the `df` dataset to reduce computation time and define X_sub and y_sub.
+
+::: {.callout-note}
+For convenience and pedagogical reasons, we are still working on a subset of the features and with the non transformed target. 
+In the real world, we would do this step with the pipeline defined at the end of the [pre-processing part](1-preprocessing.qmd).  
+:::
+
+1.  Subsample a fraction ( `0.1` ) of the `df` dataset to reduce computation time and define X_sub and y_sub. To stick to the characteristics of the target, stratify the sampling to the target's distribution. 
 
 ```{python}
 #| code-fold: true
@@ -347,7 +355,7 @@ print(oob_error_ntrees)
 
 > Note : In the Preprocessing section, you saw how to build a Pipeline. In this exercise, we will use Pipeline again. The first exercise didn't use it to let you practice scikit-learn tools documented [here](https://scikit-learn.org/stable/modules/compose.html#pipelines-and-composite-estimators).
 
-0.  For convenience, we dropped the features `dteloc`, `dtemut`. Get them back and define the new training and testing datasets `X_train, X_test, y_train, y_test`.
+0.  For convenience, we dropped the features `dteloc`, `dtemut` and trained our model on absolute prices and not on the transformed ones. Get them back and define the new training and testing datasets `X_train, X_test, y_train, y_test`.
 
 ```{python}
 #| code-fold: true
@@ -367,7 +375,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 ```
 
-1.  Create a dictionary with all hyperparameters to test for training.
+1.  Create a dictionary with the 3 hyperparameters to test (`n_estimators`, `max_features` and `min_samples_leaf`) for training.
 
     <details>
 
@@ -396,7 +404,7 @@ param_grid = {
 }
 ```
 
-2.  Using the [Grid Search documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html), write the code to set up and run cross-validated hyperparameter tuning for the RF model.
+2.  Using the [Grid Search documentation](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html), write the code to set up and run cross-validated hyperparameter tuning for the RF model. Note that training the model should last around 10 minutes.
 
 ```{python}
 #| code-fold: true
@@ -430,22 +438,19 @@ grid_search.fit(X_train, y_train)
 print(grid_search.best_params_)
 ```
 
-4.  From the fitted `grid_search` object, retrieve the best model and and retrain it on the full training set.
-
-> Note : Which type is `best_estimator_` attribute ?
-
-
 ::: {.callout-important}
 Scikit-learn  distinguishes **original parameters** from **fitted attributes with a trailing _**. The `_` suffix is a consistent scikit-learn convention: any attribute that only exists after fitting ends with `_` (e.g., `coef_`, `n_features_in_`, `classes_`). It signals "this was learned from data."
 
 ```python
-grid_search.myregressor_  
+grid_search.myfittedparam_  
 ```
 
-To access the attributes sent back by the training phase listed in the documentation, you therefore need to call 
-
-
 :::
+
+4.  From the fitted `grid_search` object, retrieve the best model. As it has only been trained on a fraction of the training set, retrain it on the full training set.
+
+> Note : Which type is `best_estimator_` attribute ?
+
 
 
 ```{python}
@@ -461,7 +466,6 @@ rf_best.fit(X_train, y_train)
 ```
 
 Congrats ! You have optimized your RF model. Now, you need to evaluate its accuracy — that is, how close the model's predictions are to the actual values..
-:::
 
 ::: {.callout-tip collapse="false"}
 ## <i class="bi bi-book"></i> Exercice 6: Model evaluation
