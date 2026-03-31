@@ -1,104 +1,75 @@
 # %%
 # ============================================
-# STEP 1 — Preprocessing
-#   - Outlier removal
-#   - One-hot encoding
+# STEP 1 — Generate synthetic regression data
 # ============================================
+
+import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, FunctionTransformer
-from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
+
+from sklearn.datasets import make_regression
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
-import numpy as np
-import polars as pl
 
-RANDOM_STATE = 202605
+# Reproducibility
+RANDOM_STATE = 20230516
+np.random.seed(RANDOM_STATE)
 
-trans = pl.concat(
-    [
-        pl.read_parquet('s3://confpns/synthetic-transactions/rawdata/transactions/transactions_houses_final.parquet'),
-        pl.read_parquet('s3://confpns/synthetic-transactions/rawdata/transactions/transactions_flats_final.parquet')
-    ]
-    ).to_pandas()
+# Generate numeric regression data
+X_num, y = make_regression(
+    n_samples=2000,
+    n_features=5,
+    noise=10.0,
+    random_state=RANDOM_STATE
+)
 
-# Filtering to keep rows in Ile de France / Paris region
-trans = trans[trans["ccodep"].isin(["75", "77", "78", "91", "92", "93", "94", "95"])]
+# Create a DataFrame
+df = pd.DataFrame(X_num, columns=[f"num_{i}" for i in range(X_num.shape[1])])
 
-# Target value
-trans["valfonc_m2"] = trans["valeurfonc"] / trans["dsupdc"]
+# Add a categorical feature
+df["category"] = np.random.choice(["A", "B", "C"], size=len(df))
 
-# Filtering
-trans = trans[(trans["valfonc_m2"] < 200000) & (trans["valfonc_m2"] > 100)]
+# Add target
+df["target"] = y
 
-
-# Apply IQR methods for the outlier removal
-def outlier_transform(y, lower=0.1, upper=0.9):
-    """
-    Transform Y target to log(Y) and remove outliers with IQR method
-
-    Args :
-        y : target
-        lower: lower quantile for the IQR
-        upper: upper quantile for the IQR
-    """
-    Q_lower = np.quantile(y, lower)
-    Q_upper = np.quantile(y, upper)
-    IQR = Q_upper - Q_lower
-
-    mask = (y >= Q_lower - 1.5 * IQR) & (y <= Q_upper + 1.5 * IQR)
-    return mask
-
-mask = outlier_transform(trans["valfonc_m2"])
-trans = trans[mask].reset_index(drop=True)
-
-# Drop NAs for target and features
-trans = trans.dropna(subset = "valfonc_m2")
-trans = trans.dropna()
-
-# Drop useless columns
-df = trans.drop(columns=[
-    'idmutation', "idnatmut", "libnatmut", 
-    "valeurfonc", "ccodep", "depcom", "distance_ltm", "distance_ltm_corr"
-])
-
-# Mutating columns dteloc and jannath
-df["dteloc"] = pd.Categorical(
-    df["dteloc"],
-    categories=["1", "2"],
-    ordered=False
-).rename_categories({"1": "House", "2": "Flat"})
-
-df['jannath_10'] = (df['jannath'] // 10)*10
-df['jannath_10'] = df['jannath_10'].where(df['jannath_10'] >= 1850, 1840)
-
-# Dropping old column
-df = df.drop(columns=["jannath"])
 
 # %%
-def date_to_days(X: pd.Series, ref_date:pd.Timestamp):
-    # converts a date to a difference to ref_date : 
-    diff_dt = pd.to_datetime(X) - ref_date
-    # Extract days part from datetime object
-    diff_dt = diff_dt.dt.days
-    # Transform it from a Pandas series to a Numpy nd array, used by scikit learn for input
-    diff_dt = diff_dt.to_numpy().reshape(-1, 1)
+# ============================================
+# STEP 2 — Preprocessing
+#   - Outlier removal
+#   - Scaling
+#   - One-hot encoding
+# ============================================
 
-    return diff_dt 
-    
-date_transformer = FunctionTransformer(
-    date_to_days,
-    kw_args={"ref_date": pd.Timestamp('2010-01-01 00:00')}
-    )
+# Simple outlier removal using IQR on numeric columns
+numeric_cols = [col for col in df.columns if col.startswith("num_")]
 
+Q1 = df[numeric_cols].quantile(0.25)
+Q3 = df[numeric_cols].quantile(0.75)
+IQR = Q3 - Q1
+
+mask = ~((df[numeric_cols] < (Q1 - 1.5 * IQR)) |
+         (df[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
+
+df = df.loc[mask].reset_index(drop=True)
+
+# Split features / target
+X = df.drop(columns="target")
+y = df["target"]
+
+# Column types
+categorical_cols = ["category"]
+
+# Preprocessing pipeline
 preprocessor = ColumnTransformer(
     transformers=[
-        ("cat", OneHotEncoder(handle_unknown="ignore"), ["dteloc", "jannath_10"]),  # one-hot encoder on feature
-        ("dat", date_transformer, "datemut") # feature time since 01-01-2010
-    ],
-    remainder="passthrough"  # to keep features not transformed
-) 
+        ("num", StandardScaler(), numeric_cols),
+        ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_cols),
+    ]
+)
 
 
 # %%
@@ -106,43 +77,6 @@ preprocessor = ColumnTransformer(
 # STEP 3 — Train / test split, model fitting,
 #          and performance evaluation
 # ============================================
-
-
-def log_transform(y):
-    return np.log10(y)
-
-def inverse_log_transform(y):
-    return 10 ** y
-
-y_transformer = FunctionTransformer(
-    func = log_transform,
-    inverse_func = inverse_log_transform)
-
-
-rf_params = {
-    "n_estimators": 100,
-    "max_depth": 5,
-    "max_features": "sqrt",
-    "min_samples_split": 2,
-    "min_samples_leaf": 10,
-    "random_state": RANDOM_STATE,
-    "oob_score": True,
-    "n_jobs": -1,  # The number of jobs to run in parallel, -1 using all processors
-}
-
-rf_pipeline = Pipeline([
-    ('preprocessing', preprocessor),
-    ('random forests', RandomForestRegressor(**rf_params))
-])
-
-model = TransformedTargetRegressor(
-    regressor=rf_pipeline,
-    transformer=y_transformer
-)
-
-# Split features / target
-X = df.drop(columns="valfonc_m2")  # X must contain only the features we'll learn from
-y = df["valfonc_m2"]  # target must be a dataframe with 1 column
 
 # Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
@@ -160,7 +94,7 @@ model = Pipeline(
         )),
     ]
 )
-# %%
+
 # Fit model
 model.fit(X_train, y_train)
 
