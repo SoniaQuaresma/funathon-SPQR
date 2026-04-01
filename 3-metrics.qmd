@@ -1,149 +1,422 @@
 ---
 lang: en-US
-title: Evaluating models
+title: Evaluating and Comparing Tree-based Models
 
 format:
   html:
     number-sections: true
 ---
 
-Dans cette partie, on propose un exercice intéressant pour appréhender une fonctionnalité majeure de Dash, le partage de données entre [callbacks](https://dash.plotly.com/sharing-data-between-callbacks). L'exercice consiste à changer l'icône de marqueur des vols dans l'application en avion ![](img/plane.png){height=20} et à faire en sorte que chaque avion soit correctement orienté en fonction de son cap de vol.
+Training a model is only half the work. Before drawing any conclusions or deploying to production, you need to rigorously assess its quality: how large are the errors, are they evenly distributed, which features drive the predictions and how does the model compare to alternatives? This section covers the full evaluation process for ensemble models, applied to the Random Forest and Gradian Boosting trained in the previous exercises.
 
-Comme nous avons pu le voir dans la première partie de ce sujet, l'API FlightRadar permet de récupérer pour chaque vol une variable `heading` qui contient le cap de vol en degrés. Nous pourrions utiliser cette variable pour donner une orientation aux icônes des marqueurs sur la carte, mais nous allons plutôt essayer de la recalculer au vol. D'ailleurs, ce n'est pas proposé dans l'exercice mais vous pouvez comparer les résultats de ce calcul avec la donnée brute disponible !
+Before evaluating our trained models, you will discover some metrics and plots to measure the quality of the predictions.
 
-::: {.callout-tip collapse="false" icon=false}
-## `<i class="bi bi-book"></i>`{=html} Exercice 4: Calcul en direct du cap des vols
+# I - How can you evaluate the model's inference ?
 
-Cet exercice est à réaliser dans le répertoire `better_app`, qui contient encore une fois deux fichiers `main.py` et `utils.py`.
+## A - Regression metrics
 
-1. Comparer le fichier `better_app/main.py` avec la correction du fichier `intermediate_app/main.py`. Identifier les nouveaux éléments et rechercher à quoi ils correspondent dans la documentation Dash.
+Regression metrics assess the quality of a model's predictions by comparing predicted and "observed" values. Each metric offers a different perspective depending on whether the goal is : 
+- to penalize extreme error ;
+- to obtain an interpretable measure in the target's unit ;
+- to quantify the share of variance explained by the model.
+A metric **depends on what you want to do and your data**. From an organisationnal point of view, it means that the "business team", with in-depth knowledge of the field, is by far the best placed to decide which are the relevant metrics to use. Decision to use these metrics shouldn't be the sole responsibility of the data science team.   
 
-<details>
-<summary>Cliquer pour voir la réponse</summary>
-On a plusieurs nouveaux éléments. D'abord, la mise en page de l'application intègre 3 nouveaux composants `dcc.Store`. Ce composant permet de stocker de la donnée JSON dans le navigateur de l'utilisateur. On va s'en servir pour communiquer la position précédente des vols en activité à chaque callback.
+**Mean Absolute Error (MAE)** :  $$\text{MAE} = \frac{1}{n}\sum_{i=1}^{n}|y_i - \hat{y}_i|$$
+MAE gives equal weight to all deviations regardless of their magnitude and sign. In the presence of extreme values in the target (as is common in real-estate prices) and in comparison with the following metrics, MAE may be a more representative measure of typical prediction error as they are less affected by extreme errors. Moreover, MAE is easily interpretable. For example, in the prediction of price per square meter in euros, an MAE of 500 means the model's predictions deviate from actual prices by 500 €/m² on average.
 
-L'attribut `storage_type` du composant détermine le type de stockage utilisé:
-- `memory`: les données sont effacées lors d'un rafraichissement de la page;
-- `local`: les données sont conservées après la sortie du navigateur;
-- `session`: les données sont effacées après la sortie du navigateur.
+**Mean Squared Error (MSE) :**   $$\text{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2$$
+MSE is the most common evaluation metric used. Because the errors are squared, large deviations contribute disproportionately: an error of 200 weighs 4 times more than an error of 100. This makes MSE sensitive to outliers in the test set. The interpretability of this is limited, because of its units, which are the square of the target units.
 
-Le décorateur de callback a également changé:
-```{python}
-#| eval: false
-#| code-overflow: scroll
-@app.callback(
-    [Output('map', 'children'), Output('memory', 'data')],
-    [Input('interval-component', 'n_intervals')],
-    [State('memory', 'data')]
-)
-```
+**Root Mean Squared Error (RMSE)** :  $$\text{RMSE} = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}$$
+RMSE is simply the square root of the MSE, which restores the original unit of the target variable. RMSE is the most widely reported metric for regression and is directly comparable across models evaluated on the same test set.
+For example, in the prediction of price per square meter in euros, an RMSE of 500 means the model's predictions deviate from actual prices by 500 €/m² on average — weighted towards larger errors. 
 
-- Premièrement, le callback met maintenant à jour deux attributs, l'attribut `children` du `dl.MapContainer` mais aussi l'attribut `data` d'un `dcc.Store`. C'est cet attribut qui est utilisé pour transmettre des données entre callbacks. Notez bien la présence d'une liste dans le `Output` du callback, qui permet de changer plusieurs éléments en une seule fois;
-- Deuxièmement, `dash.dependencies.State` permet de transmettre des données sans déclencher de callback lorsque l'attribut indiqué est modifié. Ici, on transmet les données du `dcc.Store 'memory'`.
+The key trade-off between RMSE and MAE:
 
-La fonction `update_graph_live` prend ainsi un argument supplémentaire en entrée, `previous_data`. Nous souhaitons ajouter aux dictionnaires des vols de la liste `data` une clé `rotation_angle` qui contient le cap de vol en degrés. Un bloc conditionnel a donc été ajouté pour:
+- **Choose RMSE** when large errors are particularly costly and you want the metric to reflect this (e.g. a prediction off by 2000 €/m² is much worse than being off by 200 €/m² twice);
+- **Choose MAE** when you want a robust, interpretable measure of typical error that is less dominated by a few extreme observations.
 
-- Initialiser cette clé à 0 pour chaque vol (lorsque le `dcc.Store` a son attribut `data` vide, donc à l'ouverture de la page);
-- Calculer un nouveau cap à chaque callback à partir des données de position au temps $t$ et au temps $t-1$.
+> Note : Be careful : you can compare different models based on their MAE, MSE and RMSE metrics but only **if the metrics are calculated on exactly the same test set**. 
 
-Enfin, la liste `children` renvoyée par la fonction `update_graph_live` est légèrement modifiée. Chaque marqueur a maintenant un icône spécifique récupéré grâce aux fonctions `get_custom_icon` et `get_closest_round_angle`.
-</details>
 
-2. La fonction `update_rotation_angles` de `better_app/utils.py` prend en entrée la liste des dictionnaires de vols récupérer via l'API FlightRadar et ajoute à chaque dictionnaire une clé `'rotation_angle'` associée au cap de vol de l'aéronef. En regardant cette fonction, on voit que pour chaque vol de la liste, on récupère les positions à $t$ et $t-1$ si elles existent (les cas particuliers sont gérés à part). Si elles diffèrent, on calcule un nouveau cap avec la fonction `bearing_from_positions`. Implémenter cette fonction.
+**Mean Absolute Percentage Error (MAPE)** :  $$\text{MAPE} = \frac{1}{n}\sum_{i=1}^{n}\left|\frac{y_i - \hat{y}_i}{y_i}\right| \times 100$$
+MAPE expresses errors as a percentage of the actual value, making it scale-free and immediately interpretable for non-technical stakeholders. However, MAPE is undefined when $y_i = 0$ and is biased towards underpredictions (a 100% overestimation and a 100% underestimation are not symmetrically penalized). For real-estate prices, where the target is always strictly positive, MAPE is a natural complement to RMSE.
+For example, a MAPE of 12% means the model is off by 12% of the actual price on average. 
 
-<details>
-<summary>Cliquer pour voir un indice</summary>
-Pour calculer un cap à partir de positions différentes à $t$ et $t-1$ en degrés, vous pouvez suivre la méthode décrite sur [cette page](https://www.movable-type.co.uk/scripts/latlong.html), paragraphe _Bearing_.
-</details>
+**Coefficient of Determination (R²)** :   $$R^2 = 1 - \frac{\text{SS}_\text{res}}{\text{SS}_\text{tot}} = 1 - \frac{\displaystyle\sum_{i=1}^{n}(y_i - \hat{y}_i)^2}{\displaystyle\sum_{i=1}^{n}(y_i - \bar{y})^2}$$ where $\bar{y}$ is the mean of the actual values.
+
+R² measures the proportion of variance in the target that is explained by the model. It is scale-free:
+
+- $R^2 = 1$: the model perfectly predicts every observation;
+- $R^2 = 0$: the model explains no variance — it is equivalent to always predicting the mean;
+- $R^2 < 0$: the model performs worse than the trivial mean predictor.
+
+Unlike RMSE and MAE, R² allows comparison across different datasets and targets. Its main limitation is that it can be inflated by adding features, even irrelevant ones.
+
+## B - Diagnostic plots
+
+Scalar metrics alone are insufficient: two models can share the same RMSE while exhibiting very different error patterns. Diagnostic plots reveal the structure of residuals and provide insights that numbers cannot. Moreover, they add details to see if the model performs well where you want it to perform. For example, if your aim is to have good results on the center of the distribution, you can live with worse results on extreme values (or the opposite). 
+
+**Residuals distribution** : it is a histogram of the residuals $e_i = y_i - \hat{y}_i$. 
+For a well-behaved regression model, this distribution should be:
+
+- **Centered around zero**: a systematic shift indicates a biased model that consistently over- or under-predicts ;
+- **Approximately symmetric**: asymmetry (skewness) suggests the model makes systematically larger errors in one direction, often due to the scale of the target variable ;
+- **Unimodal with thin tails**: heavy tails or bimodality indicate the model struggles with certain subpopulations.
+
+For this project, the target was log-transformed before training to reduce right-skewness. The residual distribution lets you verify that this transformation was effective in stabilizing the error pattern.
+
+**QQ plot (quantile-quantile)** : it compares empirical quantiles of $y_\text{test}$ and $\hat{y}$ by plotting them against each other. 
+If the model's predicted distribution perfectly matches the actual distribution, all points fall on the diagonal.
+
+Deviations from the diagonal reveal:
+
+- **Tails below the diagonal** (top-right): the model underestimates high values — important for identifying whether the model correctly handles premium properties ;
+- **Tails above the diagonal** (bottom-left): the model overestimates low values ;
+- **S-shaped curve**: the predicted distribution is narrower than the actual one, which is the classical sign of *regression to the mean* — the model is not capturing the full variability of the target.
+
+The QQ plot is complementary to the residuals histogram: it focuses on the overall distributional alignment rather than individual errors.
+
+**Target distribution** : it is the plot of the sorted values of a series against their percentile rank, producing a cumulative distribution curve. Comparing the curves for $y_\text{test}$ and $\hat{y}$ side by side reveals systematic differences in location, spread, or shape:
+
+- A predicted distribution that is more compressed than the actual one confirms regression to the mean ;
+- A shifted curve indicates a constant bias ;
+- Differences in the upper percentiles are particularly informative for price prediction, where the high end of the market is often the hardest to model.
+
+**Permutation feature importance (for RF)** : with scikit-learn's `permutation_importance`, it measures the contribution of each feature to model performance. 
+The principle: for each feature, the values are randomly shuffled across observations, breaking the relationship between that feature and the target and the drop in model performance (measured by the chosen metric) is recorded. This is repeated 5 times and the results are averaged for stability.
+
+Permutation importance has several advantages over the default impurity-based importance available in tree models:
+
+- It is evaluated on held-out test data, not on training data, so it reflects generalization performance ;
+- It is not biased towards high-cardinality features or numerical variables ;
+- It is model-agnostic and directly tied to the evaluation metric.
+
+Features with near-zero or negative permutation importance can safely be removed without hurting predictive performance. A high importance score validates that a feature carries genuine predictive signal.
+
+
+# 2 - Computing evaluation metrics
+
+::: callout-tip
+## <i class="bi bi-book"></i> Exercice 8: Compute evaluation metrics
+
+In this exercise, you will generate predictions from the best RF model and compute all four evaluation metrics on the test set.
+
+1.  Generate predictions on the test set using the best RF model from Exercise 5 and compute the residuals.
 
 ```{python}
 #| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
+#| code-summary: See the solution
 #| code-overflow: scroll
 #| eval: false
-def bearing_from_positions(
-    longitude: float,
-    latitude: float,
-    previous_longitude: float,
-    previous_latitude: float,
-) -> float:
-    """
-    Compute bearing from two sets of coordinates, at
-    t-1 and t. Bearing is measured clockwise from the north.
-
-    Args:
-        longitude (float): Longitude (in degrees).
-        latitude (float): Latitude (in degrees).
-        previous_longitude (float): Previous longitude (in degrees).
-        previous_latitude (float): Previous latitude (in degrees).
-
-    Returns:
-        float: Bearing in degrees.
-    """
-    # Convert to radians
-    lat1, lon1, lat2, lon2 = map(
-        math.radians,
-        [previous_latitude, previous_longitude, latitude, longitude]
-    )
-    # Compute the difference between the two longitudes
-    dlon = lon2 - lon1
-    # Compute the initial bearing
-    y = math.sin(dlon) * math.cos(lat2)
-    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dlon)
-    bearing_rad = math.atan2(y, x)
-    # Convert the bearing to degrees
-    bearing_deg = math.degrees(bearing_rad)
-    # Ensure the bearing is between 0 and 360 degrees
-    bearing_deg = (bearing_deg + 360) % 360
-    return bearing_deg
+y_pred = rf_best.predict(X_test)
+residuals = y_test - y_pred
 ```
 
-3. La fonction `get_custom_icon` renvoie un icône d'avion orienté dans une certaine direction (voir le répertoire `img` du dépôt) en fonction de l'angle `round_angle` donné en entrée. Cette angle doit avoir une valeur multiple de 15 comprise entre 0 et 345. Implémenter la fonction `get_closest_round_angle` qui prend en entrée un angle en degrés (compris entre 0 et 360) et qui renvoie l'angle le plus proche parmi les valeurs autorisées pour `get_custom_icon`.
+2.  Compute RMSE, MAE and R² using scikit-learn's metrics module.
 
-```{python}
-#| code-fold: true
-#| code-summary: Cliquer pour voir la réponse
-#| code-overflow: scroll
-#| eval: false
-def get_closest_round_angle(angle: float) -> int:
-    """
-    Get closest round angle (multiple of 15 degrees)
-    to the given angle.
+::: {.callout-tip collapse="true" title="Click to view a hint"}
 
-    Args:
-        angle (float): Given angle.
-
-    Returns:
-        int: Closest angle among the following values:
-            0, 15, 30, 45, 60, 75, 90, 105, 120, 135, 150,
-            165, 180, 195, 210, 225, 240, 255, 270,
-            285, 300, 315, 330, 345.
-    """
-    round_angles = [
-        0, 15, 30, 45, 60, 75, 90,
-        105, 120, 135, 150, 165, 180,
-        195, 210, 225, 240, 255, 270,
-        285, 300, 315, 330, 345, 360,
-    ]
-    differences = np.array([
-        angle - round_angle for round_angle in round_angles
-    ])
-    abs_differences = np.abs(differences)
-    closest_angle_idx = abs_differences.argmin()
-    closest_angle = round_angles[closest_angle_idx]
-    if closest_angle == 360:
-        return 0
-    else:
-        return closest_angle
-```
-
-4. Exécuter l'application en lançant depuis la racine du projet dans un Terminal la commande
-```
-python better_app/main.py
-```
-
-Vous devriez observer une application similaire à celle présentée en page d'accueil du sujet !
+Import `root_mean_squared_error`, `mean_absolute_error` and `r2_score` from `sklearn.metrics`. Build a dictionary of results and print each value with a descriptive label. You can see the documentation of `sklearn.metrics` [here](https://scikit-learn.org/stable/api/sklearn.metrics.html).
 
 :::
 
-Dans l'étape suivante, on propose d'améliorer une nouvelle fois l'application en autorisant l'utilisateur à appliquer des filtres différents sur les vols qu'il souhaite observer.
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+from sklearn.metrics import root_mean_squared_error, mean_absolute_error, r2_score
+
+metrics_rf = {
+    "RMSE": root_mean_squared_error(y_test, y_pred),
+    "MAE":  mean_absolute_error(y_test, y_pred),
+    "R²":   r2_score(y_test, y_pred),
+}
+
+for name, val in metrics_rf.items():
+    print(f"  {name}: {val:.4f}")
+```
+
+3.  (Optional) Compute the MAPE to express the average prediction error as a percentage of the actual price.
+
+::: {.callout-tip collapse="true" title="Click to view a hint"}
+
+Use `mean_absolute_percentage_error` from `sklearn.metrics`. Make sure y_test contains no zero values before dividing. You can see the documentation [here](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.mean_absolute_percentage_error.html).
+
+:::
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+# Disponible à partir de scikit-learn >= 0.24
+from sklearn.metrics import mean_absolute_percentage_error
+
+mape_pct = mean_absolute_percentage_error(y_test, y_pred) * 100
+print(f"MAPE : {mape_pct:.2f} %")
+```
+:::
+
+::: callout-tip
+## <i class="bi bi-book"></i> Exercice 9: Generate diagnostic plots
+
+In this exercise, you will produce four diagnostic plots: a residuals distribution, a QQ-plot comparing actual and predicted quantiles, the target distribution and a feature importance plot. For each plot, take a moment to interpret what you observe.
+
+1.  Write a `residuals_distribution(residuals, rmse)` function to plot the histogram of the residuals, with the parameters `residuals` (a pandas Series) and `rmse` (a float). 
+
+::: {.callout-tip collapse="true" title="Click to view a hint"}
+
+Use `matplotlib.pyplot` module to plot the distribution. You can read the documentation [here](https://matplotlib.org/stable/tutorials/pyplot.html).
+
+:::
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+import matplotlib.pyplot as plt
+
+def residuals_distribution(residuals: pd.Series, rmse: float):
+    fig = plt.figure()
+    plt.hist(residuals, bins=100, edgecolor="none")
+    plt.axvline(0, color="red", linestyle="--", label="Residual = 0")
+    plt.xlabel("Residual")
+    plt.ylabel("Fréquency")
+    plt.title(f"Residuals distribution (RMSE = {rmse:.3f})")
+    plt.legend()
+    return fig
+```
+
+2.  Plot the residuals distribution. Look at whether the histogram is centered around zero and whether it is approximately symmetric.
+
+::: {.callout-tip collapse="true" title="Click to view a hint"}
+
+Pass the residuals series and the RMSE value computed in Exercise 8. The RMSE value is needed in the plot title. Call `plt.show()` to display the figure.
+
+:::
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+fig_residuals = residuals_distribution(residuals, metrics_rf["RMSE"])
+plt.show()
+```
+
+3.  Write a `QQplot(y_test, y_pred)` function which computes 1000 quantile points for both series and plots them against each other. The parameters are `y_test` and `y_pred`, pandas series of observed and predicted target. The function should return the plot. 
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+import numpy as np
+
+def QQplot(y_test: pd.Series, y_pred: pd.Series):
+    """
+    Actual quantiles vs predicted quantiles
+    """
+    quantiles = np.linspace(0, 100, 1000)
+    q_real = np.percentile(y_test, quantiles)
+    q_predict = np.percentile(y_pred, quantiles)
+
+    fig = plt.figure()
+    plt.scatter(q_real, q_predict, alpha=0.5, s=5, label="Quantiles")
+    plt.plot(
+        [q_real[0], q_real[-1]],
+        [q_real[0], q_real[-1]],
+        "r--", linewidth=1.5, label="Actual = Predicted"
+    )
+    plt.xlabel("Actual quantiles")
+    plt.ylabel("Predicted quantiles")
+    plt.title("QQ-plot: actual vs predicted")
+    plt.legend()
+    return fig
+
+```
+
+4.  Plot the QQ plot comparing the quantiles of the actual and predicted distributions. Check whether the points align closely along the diagonal, especially in the tails.
+
+::: {.callout-tip collapse="true" title="Click to view a hint"}
+
+Points well above the diagonal in the upper tail indicate that the model underestimates high prices.
+
+:::
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+fig_qq = QQplot(y_test, y_pred)
+plt.show()
+```
+
+5. Define a `target_distribution()` function to plot the distribution of the parameter `y`, a pandas Serie.
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+def target_distribution(y: pd.Series):
+    y_sorted = np.sort(y)
+    axe = np.linspace(0, 100, len(y_sorted))   # axe with percentiles
+
+    fig = plt.figure()
+    plt.plot(axe, y_sorted)
+    plt.xlabel("Percentile")
+    plt.ylabel("Valeur")
+    plt.title("Distribution ordonnée")
+    return fig
+
+```
+
+6.  Plot and compare the target distributions for the actual test values and the predicted values side by side.
+
+::: {.callout-tip collapse="true" title="Click to view a hint"}
+
+Call it twice — once for `y_test` and once for `y_pred`. Display both figures. Compare the shapes: a compressed predicted distribution indicates regression to the mean, while a systematic vertical shift indicates a constant bias.
+
+:::
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+fig_actual = target_distribution(y_test)
+plt.title("Target distribution — actual values")
+plt.show()
+
+fig_pred = target_distribution(y_pred)
+plt.title("Target distribution — predicted values")
+plt.show()
+```
+
+
+::: {.callout-tip}
+If you want to plot both plots on a single figure, you can adapt the function : 
+
+```{python}
+def plot_combined_distribution(y_test: pd.Series, y_pred: pd.Series):
+    """
+    Plots the target distributions of actual and predicted values on the same graph.
+
+    Parameters:
+    y_test (pd.Series): Actual values.
+    y_pred (pd.Series): Predicted values.
+    """
+    # Compute distributions
+    axe_actual, y_sorted_actual = np.linspace(0, 100, len(np.sort(y_test))), np.sort(y_test)
+    axe_pred, y_sorted_pred = np.linspace(0, 100, len(np.sort(y_pred))), np.sort(y_pred)
+
+    # Create the plot
+    fig, ax = plt.subplots()
+    ax.plot(axe_actual, y_sorted_actual, label='Actual Values', color='blue')
+    ax.plot(axe_pred, y_sorted_pred, label='Predicted Values', color='red')
+
+    # Customize the plot
+    ax.set_xlabel("Percentile")
+    ax.set_ylabel("Price")
+    ax.set_title("Target distribution — actual vs predicted values")
+    ax.legend()
+    plt.show()
+
+
+plot_combined_distribution(y_test, y_pred)
+```
+:::
+
+7. Write a `calculate_importance(X_test, y_test, RANDOM_STATE, rf_best, SCORING)` function, which returns a sorted Series of importance scores with features name as index. The parameters are the test set (`X_test` and `y_test`), the RF model `rf_best` trained in last section and the scoring chosen for the impurity reduction.
+
+> Note: Permutation importance is computationally expensive on a large test set. The `calculate_importance()` function automatically subsamples up to 100,000 observations before computing importance scores. This subsample does not change the result.
+
+::: {.callout-tip collapse="true" title="Click to view a hint"}
+
+Use `permutation_importance` function from scikit-learn. See [here](https://scikit-learn.org/stable/modules/generated/sklearn.inspection.permutation_importance.html) for the documentation.
+
+:::
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+from sklearn.inspection import permutation_importance
+
+def calculate_importance(X_test, y_test, RANDOM_STATE, final_rf, SCORING):
+    X_test_sample = X_test.sample(n=min(100_000, len(X_test)), random_state=RANDOM_STATE)
+    y_test_sample = y_test.loc[X_test_sample.index]
+
+    perm = permutation_importance(
+        final_rf, X_test_sample, y_test_sample,
+        n_repeats=5,
+        scoring=SCORING,
+        n_jobs=-1,
+        random_state=RANDOM_STATE
+    )
+
+    importances = (
+        pd.Series(perm.importances_mean, index=X_test.columns)
+        .sort_values(ascending=False)
+    )
+    return importances
+```
+
+8.  Write a `permutation_importance()` function to plot the bar chart of features importance. 
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+def importance_plot(importances):
+    """
+    Permutation importance plot
+    """
+    fig, ax = plt.subplots(figsize=(8, 6))
+    importances.head(20).plot.barh(ax=ax)
+    ax.invert_yaxis()
+    ax.set_title("Permutation importance (top 20)")
+    ax.set_xlabel("Mean increase in RMSE")
+    plt.tight_layout()
+    plt.savefig("importances.png", dpi=150)
+    return fig
+
+```
+
+9.  Compute the permutation importance and plot the top 20 most important features.
+
+::: {.callout-tip collapse="true" title="Click to view a hint"}
+
+Calculate the importance with the train set and the final RF model. The `SCORING` argument should match the metric used during training (e.g. `"r2"`).
+
+:::
+
+```{python}
+#| code-fold: true
+#| code-summary: See the solution
+#| code-overflow: scroll
+#| eval: false
+
+score = "r2"
+RANDOM_STATE = 202605
+
+importances = calculate_importance(X_test, y_test, RANDOM_STATE, rf_best, score)
+fig_importance = importance_plot(importances)
+plt.show()
+```
+
+Congrats 🎉! You now have a complete evaluation pipeline: scalar metrics, residual diagnostics, distributional analysis, feature importance and a head-to-head model comparison. These steps form the foundation of any rigorous model validation workflow.
+:::
