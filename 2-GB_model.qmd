@@ -232,7 +232,7 @@ def results_to_df(results_: dict):
 
     return results_df_.sort_values("val_r2", ascending=False)
 
-results_to_df(gs_step1.cv_results_)
+df_step1 = results_to_df(gs_step1.cv_results_)
 ```
 
 ::: callout-important
@@ -248,22 +248,27 @@ In scikit-learn's `GridSearchCV`, the column `mean_test_score` refers to the **c
 #| eval: false
 import matplotlib.pyplot as plt
 
-learning_rates = param_grid_step1["regressor__GB__learning_rate"]
+def plot_results_cv(param_group_by:str, results_df_):
+    param_group_by_values = results_df_[param_group_by].unique()
 
-fig, ax = plt.subplots(figsize=(13, 4))
+    other_param = [column for column in results_df_.columns.to_list() if column not in [param_group_by, "val_r2", "train_r2"]][0]
 
-for lr in learning_rates:
-    subset = df_step1[df_step1["learning_rate"] == lr].sort_values("max_iter")
-    line, = ax.plot(subset["max_iter"], subset["train_r2"], linestyle="--", marker="o", label=f"Train lr={lr}")
-    ax.plot(subset["max_iter"], subset["val_r2"], marker="x", color=line.get_color(), label=f"Val lr={lr}")
+    fig, ax = plt.subplots(figsize=(13, 4))
 
-ax.set_xlabel("max_iter (number of trees)")
-ax.set_ylabel("R²")
-ax.set_title("Step 1 — Joint optimisation of max_iter and learning_rate")
-ax.legend(fontsize=8)
-ax.grid(True, linestyle=":")
-plt.tight_layout()
-plt.show()
+    for param_line in param_group_by_values:
+        subset = results_df_[results_df_[param_group_by] == param_line].sort_values(other_param)
+        line, = ax.plot(subset[other_param], subset["train_r2"], linestyle="--", marker="o", label=f"Train {param_group_by}={param_line}")
+        ax.plot(subset[other_param], subset["val_r2"], marker="x", color=line.get_color(), label=f"Val {param_group_by}={param_line}")
+
+    ax.set_xlabel(f"{other_param}")
+    ax.set_ylabel("R²")
+    ax.set_title(f"Joint optimisation of {param_group_by} and {other_param}")
+    ax.legend(fontsize=8)
+    ax.grid(True, linestyle=":")
+    plt.tight_layout()
+    plt.show()
+
+plot_results_cv("learning_rate", df_step1)
 ```
 
     > If the best value of `max_iter` is the largest value tested (1000), consider extending the grid before moving to the next step.
@@ -333,32 +338,7 @@ import numpy as np
 
 df_step2 = results_to_df(gs_step2.cv_results_)
 
-
-depth_labels = df_step2["max_depth"].unique()
-
-fig, axes = plt.subplots(1, len(depth_labels), figsize=(14, 4), sharey=True)
-
-for ax, depth_label in zip(axes, depth_labels):
-    subset = df_step2[df_step2["max_depth"] == depth_label].copy()
-    x = np.arange(len(subset))
-    width = 0.35
-
-    ax.bar(x - width / 2, subset["train_r2"], width, label="Train R² (CV)",
-           color="steelblue")
-    ax.bar(x + width / 2, subset["val_r2"],   width, label="Val R² (CV)",
-           color="tomato")
-    ax.set_xticks(x)
-    ax.set_xticklabels(subset["min_samples_leaf"].astype(str))
-    ax.set_xlabel("min_samples_leaf")
-    ax.set_title(f"max_depth = {depth_label}")
-    ax.legend(fontsize=8)
-    ax.grid(True, linestyle=":", axis="y")
-
-axes[0].set_ylabel("R²")
-fig.suptitle("Step 2 — Joint optimisation of max_depth and min_samples_leaf",
-             fontsize=12)
-plt.tight_layout()
-plt.show()
+plot_results_cv("max_depth", df_step2)
 
 BEST_DEPTH    = gs_step2.best_params_["regressor__GB__max_depth"]
 BEST_MIN_LEAF = gs_step2.best_params_["regressor__GB__min_samples_leaf"]
@@ -407,7 +387,7 @@ gs_step3 = GridSearchCV(
 
 
 df_step3 = results_to_df(gs_step3.cv_results_)
-
+plot_results_cv("l2_regularization", df_step3)
 print("Best params :", gs_step3.best_params_)
 print(f"Best CV R²  : {gs_step3.best_score_:.4f}")
 
