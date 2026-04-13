@@ -71,6 +71,7 @@ The aim of this part is to manipulate new database and understand features in or
     );
     """
     )
+    RANDOM_STATE=202605
     ```
 
 2.  **Load, with DuckDB, all data inputs in a DataFrame `trans`**(for transactions).\*\*
@@ -401,7 +402,7 @@ df = trans.drop(columns=[
 
 ```{python}
 # Printing all rows containing at least one NA
-df[df.isna().any(axis=1)]
+print(df[df.isna().any(axis=1)])
 
 # Filtering NA values
 df = df.dropna()
@@ -469,7 +470,7 @@ y = df["valfonc_m2"]  # target must be a dataframe with 1 column
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
     test_size=0.2,
-    random_state=202605
+    random_state=RANDOM_STATE
 )
 ```
 
@@ -577,8 +578,6 @@ We will now create our first pipeline to transform the data for the training pha
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, FunctionTransformer
 
-# Selection of integer columns
-numeric_cols = X.select_dtypes(include="integer").columns.to_list()
 
 def date_to_days(X: pd.Series, ref_date:pd.Timestamp):
     # converts a date to a difference to ref_date : 
@@ -604,7 +603,7 @@ preprocessor = ColumnTransformer(
 ) 
 ```
 
-2.  Create the Pipeline for training a RandomForestRegressor model.
+2.  Create the Pipeline for training a RandomForestRegressor model. Go to the [scikit-learn's documentation](https://scikit-learn.org/stable/modules/compose.html#pipelines-and-composite-estimators) on the matter to understand how it works. 
 
     <details>
 
@@ -649,14 +648,14 @@ rf_params = {
     "max_features": "sqrt",
     "min_samples_split": 2,
     "min_samples_leaf": 10,
-    "random_state": 202605,
+    "random_state": RANDOM_STATE,
     "oob_score": True,
     "n_jobs": -1,  # The number of jobs to run in parallel, -1 using all processors
 }
 
 rf_pipeline = Pipeline([
     ('preprocessing', preprocessor),
-    ('random forests', RandomForestRegressor(**rf_params))
+    ('RF', RandomForestRegressor(**rf_params))
 ])
 
 model = TransformedTargetRegressor(
@@ -668,3 +667,14 @@ model = TransformedTargetRegressor(
 :::
 
 Congrats ! You have completed the data preparation exercises. Now you can choose one of the two model you'll want to train - or do both ! 💪
+
+::: {.callout-tip}
+Scikit-learn allows you to access every step defined in the `rf_pipeline` (preprocessing or RF).  
+
+```python
+rf_pipeline["preprocessing"]   # access to the first step
+rf_pipeline["RF"]   # access to the second step
+```
+
+For more details, go to [the documentation](https://scikit-learn.org/stable/modules/compose.html#access-pipeline-steps).
+:::
