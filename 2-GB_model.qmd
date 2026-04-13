@@ -505,8 +505,6 @@ for split, X, y in list:
 
 2.  Plot predicted values against actual values on the test set. 
 
-
-
 ```{python}
 #| code-fold: true
 #| code-summary: See the solution
