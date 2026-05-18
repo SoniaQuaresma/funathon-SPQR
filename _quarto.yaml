@@ -1,7 +1,7 @@
 project:
   type: website
   render:
-    - "*.qmd"
+    - "subject/*.qmd"
 website:
   title: "AIML4OS Funathon - Project 1"
   page-navigation: true
@@ -31,23 +31,23 @@ website:
       - text: "0. Introduction"
         menu: 
         - text: "Presentation"
-          href: index.qmd
+          href: subject/index.qmd
         - text: "Data presentation"
-          href: intro_data.qmd
+          href: subject/intro_data.qmd
       - text: "1. Preprocessing"
-        href: 1-preprocessing.qmd
+        href: subject/1-preprocessing.qmd
       - text: "2. Modelling"
-        menu: 
+        menu:
         - text: "with a random forest"
-          href: 2-RF_model.qmd
+          href: subject/2-RF_model.qmd
         - text: "with a gradient boosting"
-          href: 2-GB_model.qmd
+          href: subject/2-GB_model.qmd
       - text: "3. Model evaluation"
-        href: 3-metrics.qmd
+        href: subject/3-metrics.qmd
       - text: "4. Model logging"
-        href: 4-logging.qmd
+        href: subject/4-logging.qmd
       - text: "5. Deployment"
-        href: 5-deployment.qmd
+        href: subject/5-deployment.qmd
 
 
 format:

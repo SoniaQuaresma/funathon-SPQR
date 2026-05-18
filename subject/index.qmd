@@ -105,7 +105,7 @@ In-depth details about the data is presented in the [dedicated page](intro_data.
 
 -   You need to have an account on [Insee's Onyxia platform](https://datalab.sspcloud.fr/), called SSPCloud (for *cloud platform for the French Official Statistical System*). When you are on this webpage, you should see something similar to this image once you're logged in. To change the language, you can do so on the bottom right part of the webpage (see the orange arrow on the screen shot below).
 
-![Home page of <https://datalab.sspcloud.fr/>](onyxia_home.png)
+![Home page of <https://datalab.sspcloud.fr/>](../img/onyxia_home.png)
 
 -   You also need to have a Github account. Your Github credentials (username, email and token) should be registered in your [Insee's Onyxia](https://datalab.sspcloud.fr/) account in the My account/Git tab.
 
@@ -117,13 +117,13 @@ Launch a MLflow service by clicking on the below button with your Onyxia account
 
 First, you need to fork the funathons's project on Github by clicking on [this link](https://github.com/AIML4OS/funathon-project1/fork). For convenience, **please not to change the repository name**. Write down the owner's name `OWNER_NAME` for the next step.
 
-![Forking a github project](github_fork.png)
+![Forking a github project](../img/github_fork.png)
 
 
 ## Open a VS Code on SSPCloud
 
 
-To launch the project, open a VS Code service with the following button: <a href="https://datalab.sspcloud.fr/launcher/ide/vscode-python?name=AIML4OS-funathon-project1&version=2.5.5&s3=region-79669f20&git.cache=«5000»&networking.user.enabled=true&autoLaunch=true" target="_blank" rel="noopener"><img src="https://custom-icon-badges.demolab.com/badge/SSP%20Cloud-Launch_with_VSCode-blue?logo=vsc&amp;logoColor=white" alt="Onyxia"/></a>.
+To launch the project, open a VS Code service with the following button: <a href="https://datalab.sspcloud.fr/launcher/ide/vscode-python?name=AIML4OS-funathon-project1&version=2.5.5&s3=region-79669f20&git.cache=«5000»&git.repository=«https%3A%2F%2Fgithub.com%2FAIML4OS%2Ffunathon-project1.git»&networking.user.enabled=true&autoLaunch=true" target="_blank" rel="noopener"><img src="https://custom-icon-badges.demolab.com/badge/SSP%20Cloud-Launch_with_VSCode-blue?logo=vsc&amp;logoColor=white" alt="Onyxia"/></a>.
 
 In the VS Code service, open a terminal (`CTRL` + `MAJ` + `C` or in the file menu go to `Terminal > New Terminal`). Clone the project repository with the following command after replacing `OWNER_NAME` with your name on Github from the previous step:
 

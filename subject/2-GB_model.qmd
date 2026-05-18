@@ -25,7 +25,7 @@ Like Random Forests, **Gradient Boosting** is an ensemble method that combines m
 
 This sequential construction gives gradient boosting a stronger capacity to reduce **bias** — it can fit complex relationships that a random forest might miss. In a regression problem with squared-error loss, the pseudo-residual for observation $i$ is simply $y_i - \hat{y}_i^{(t-1)}$: each tree literally predicts what the current model got wrong.
 
-![Overview of the Gradient Boosting training](GB.png)
+![Overview of the Gradient Boosting training](../img/GB.png)
 
 ::: callout-warning
 ### Gradient boosting and overfitting

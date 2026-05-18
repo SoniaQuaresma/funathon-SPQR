@@ -13,7 +13,7 @@ Pre-processing is built on `pandas` and on scikit-learn's pipeline structures. I
 
 To have a better understanding of what we will do, here is an overview of the pre-processing steps we will introduce in this part.
 
-![Overview of the pre-processing](pre-processing.png)
+![Overview of the pre-processing](../img/pre-processing.png)
 
 # What are data inputs ?
 
