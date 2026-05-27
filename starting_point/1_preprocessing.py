@@ -65,4 +65,103 @@ for ax, (data, label) in zip(axes, [(y[y <= 2000], "Y below 2000€ per sqm"), (
 
 plt.tight_layout()
 plt.show()
+
+# %%
+n0 = trans.shape[0]
+print(f"{n0} rows before filtering")
+
+# Apply some deterministic threshold on the dataframe
+trans = trans[(trans["price_sqm"] < 200000) & (trans["price_sqm"] > 100)]
+
+print(f"{trans.shape[0]} rows after deterministic filtering")
+
+# Apply IQR methods for the outlier removal
+def outlier_transform(y, lower=0.1, upper=0.9):
+    """
+    Transform Y target to log(Y) and remove outliers with IQR method
+
+    Args :
+        y : target
+        lower: lower quantile for the IQR
+        upper: upper quantile for the IQR
+    """
+    Q_lower = np.quantile(y, lower)
+    Q_upper = np.quantile(y, upper)
+    IQR = Q_upper - Q_lower
+
+    mask = (y >= Q_lower - 1.5 * IQR) & (y <= Q_upper + 1.5 * IQR)
+    return mask
+
+mask = outlier_transform(trans["price_sqm"])
+trans = trans[mask].reset_index(drop=True)
+
+n1 = trans.shape[0]
+
+print(f"{n1} rows after deterministic and statistic filtering")
+print(f'Applying these filters methods has dropped about {((n0 - n1)/n0)*100:.2f} % of the transactions.')
+
+# %%
+trans.shape
+trans = trans.dropna(subset = "price_sqm")
+trans.shape
+
+# %%
+import pandas as pd
+
+pd.set_option("display.max_info_columns", 200)
+pd.set_option("display.max_columns", 200)
+pd.set_option("display.width", 2000)
+
+trans.info()
+# %%
+df = trans.drop(columns=["price", "prop_loc_dep", 
+"prop_loc_citycode", "dist_tosea"])
+
+df.shape
+# %%
+# Printing all rows containing at least one NA
+print(df[df.isna().any(axis=1)])
+
+# Filtering NA values
+df = df.dropna()
+
+
+# %%
+df["prop_type"] = pd.Categorical(
+    df["prop_type"].astype(str),
+    categories=["1", "2"],
+    ordered=False
+).rename_categories({"1": "House", "2": "Flat"})
+
+
+# %%
+counts = df.value_counts("prop_year_harm").reset_index()
+counts[counts["prop_year_harm"] < 1850].describe() # there more than 500 different years of construction, going from 13th century to now. Maybe we can bundle together years before 1850 and group them by decade
+
+counts_10 = ((df["prop_year_harm"] // 10)*10).value_counts().reset_index()  # 82 modalities
+counts_10[counts_10["prop_year_harm"] < 1850].describe()  # years before 1850 represent 64 modalities with maximal class of about two thousands operations - ok
+counts_10[counts_10["prop_year_harm"] < 1850]["count"].sum()
+
+# Replacing year of construction by decade and merging together all years before 1850
+df['prop_year_harm_10'] = (df['prop_year_harm'] // 10)*10
+df['prop_year_harm_10'] = df['prop_year_harm_10'].where(df['prop_year_harm_10'] >= 1850, 1840)
+
+# Dropping old column
+df = df.drop(columns=["prop_year_harm"])
+# %%
+from sklearn.model_selection import train_test_split
+
+# Split features / target
+X = df.drop(columns=["price_sqm"])  # X must contain only the features we'll learn from
+y = df["price_sqm"]  # target must be a dataframe with 1 column
+
+# Split train / test set
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y,
+    test_size=0.2,
+    random_state=42
+)
+
+print(f"Tenho {X_train.shape} no train")
+print(f"Tenho {X_test.shape} no train")
 # %%
