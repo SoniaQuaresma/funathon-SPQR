@@ -2,6 +2,10 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, FunctionTransformer, StandardScaler
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer, make_column_selector as selector
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
 
 def date_to_days(X: pd.Series, ref_date: pd.Timestamp):
     # converts a date to a difference to ref_date :
