@@ -1,3 +1,4 @@
+# %%
 from sklearn.pipeline import Pipeline
 from preprocess import set_preprocessor, set_y_transformer
 from sklearn.compose import TransformedTargetRegressor
@@ -15,3 +16,5 @@ def set_pipeline(ml_name, ml_model):
     )
 
     return ml_model_pipeline
+
+# %%

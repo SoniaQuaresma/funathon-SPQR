@@ -1,9 +1,9 @@
 # %%
-#from sklearn.model_selection import train_test_split
-#from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
 from preprocess import complete_pre_processing
 from log_mlflow import log_to_mlflow
-#from pipeline import set_pipeline
+from pipeline import set_pipeline
 from utils import setup_logging, set_seed
 
 logger = setup_logging()
@@ -57,7 +57,7 @@ gb_model_final.fit(X_train, y_train)
 # %%
 # Saving model to MLFlow
 logger.info("Storing GB model to MLFlow")
-exp_name = "Funathon - project 1"
+exp_name = "Funathon - project 1 SQ"
 
 log_to_mlflow(
     exp_name=exp_name,
