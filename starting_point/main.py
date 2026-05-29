@@ -1,12 +1,12 @@
 # %%
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
-from preprocess import complete_pre_processing
-from log_mlflow import log_to_mlflow
-from pipeline import set_pipeline
-from utils import setup_logging, set_seed
+#from preprocess import complete_pre_processing
+#from log_mlflow import log_to_mlflow
+#from pipeline import set_pipeline
+#from utils import setup_logging, set_seed
 
-logger = setup_logging()
+#logger = setup_logging()
 # %%
 logger.info("Importing data")
 
