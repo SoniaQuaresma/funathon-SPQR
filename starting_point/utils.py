@@ -1,3 +1,4 @@
+# %%
 import logging
 import datetime
 
@@ -19,3 +20,4 @@ def setup_logging():
 
 def set_seed():
     return 202605
+# %%
